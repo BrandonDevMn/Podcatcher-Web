@@ -1,27 +1,38 @@
 # Podcatcher Web - Podcast App Specification
 
 ## Overview
-A Progressive Web App (PWA) for iOS that allows users to search for podcasts, view episodes, and play audio content using the iTunes Search API.
+A Progressive Web App (PWA) for iOS that allows users to search for podcasts, view episodes, and play audio content using the iTunes Search API. Built with vanilla HTML, CSS, and JavaScript following iOS design patterns.
 
 ## Core Features
 
 ### 1. Podcast Search
-- Search for podcasts using the iTunes Search API
-- Display search results with podcast artwork, title, and description
-- Filter results by podcast categories
-- Show subscriber counts and ratings when available
+- Real-time search using iTunes Search API with debounced input
+- Display search results in responsive grid layout with podcast cards
+- Show podcast artwork, title, artist, and genre information
+- Cached search results for improved performance
+- Empty state messaging for no results
 
-### 2. Episode Viewing
-- Display episode list for selected podcasts
-- Show episode titles, descriptions, publish dates, and durations
-- Sort episodes by date (newest first)
-- Show episode artwork if available
+### 2. Episode Management
+- Modal-based episode viewing with podcast details
+- RSS feed parsing for comprehensive episode data
+- Episode list with titles, descriptions, publish dates, and durations
+- Automatic sorting by date (newest first)
+- Fallback artwork handling for missing images
+- Smart text truncation for descriptions
 
-### 3. Audio Playback
-- Play episodes using HTML5 audio element
-- Basic playback controls (play, pause, seek)
-- Display current playback time and total duration
-- Show currently playing episode information
+### 3. Enhanced Audio Playback
+- HTML5 audio with custom player interface
+- **Auto-play functionality** - Episodes start playing automatically when selected
+- **Smart loading states** - Loading spinner on play button during audio preparation
+- **Instant tab switching** - Automatic navigation to player tab when episode is selected
+- Advanced playback controls:
+  - Play/pause with visual state indicators
+  - Skip backward (15 seconds) and forward (30 seconds)
+  - Seek functionality with progress bar
+  - Real-time duration and current time display
+- **Media Session API integration** for lock screen controls
+- **Playback position persistence** - Remembers where user left off
+- **Background playback support** where browser allows
 
 ## API Integration
 
