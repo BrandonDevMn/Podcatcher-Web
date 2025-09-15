@@ -1,0 +1,20 @@
+{
+    "name": "Podcatcher",
+    "short_name": "Podcatcher",
+    "description": "A simple and elegant podcast player for iOS",
+    "start_url": "./index.html",
+    "scope": "./",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "theme_color": "#007AFF",
+    "background_color": "#F2F2F7",
+    "icons": [
+        {
+            "src": "icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": ["entertainment", "music"]
+}
