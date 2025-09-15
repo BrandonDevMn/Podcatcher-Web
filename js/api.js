@@ -159,14 +159,19 @@ class PodcastAPI {
         const enclosure = item.querySelector('enclosure');
         const audioUrl = enclosure ? enclosure.getAttribute('url') : '';
 
+        console.log('Parsing episode:', title);
+        console.log('Audio URL found:', audioUrl);
+        console.log('Enclosure type:', enclosure ? enclosure.getAttribute('type') : 'none');
+
         if (!title || !audioUrl) {
+            console.warn('Skipping episode - missing title or audio URL');
             return null;
         }
 
         const duration = this.getTextContent(item, 'itunes\\:duration') || this.getTextContent(item, 'duration');
         const artwork = this.getImageUrl(item);
 
-        return {
+        const episode = {
             title: stripHtml(title),
             description: stripHtml(description),
             audioUrl: audioUrl,
@@ -176,6 +181,9 @@ class PodcastAPI {
             guid: guid || audioUrl,
             type: enclosure ? enclosure.getAttribute('type') : 'audio/mpeg'
         };
+
+        console.log('Parsed episode:', episode);
+        return episode;
     }
 
     getTextContent(element, selector) {

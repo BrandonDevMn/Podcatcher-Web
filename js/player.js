@@ -50,24 +50,44 @@ class AudioPlayer {
         }
     }
 
-    async loadEpisode(episode, podcastName = '') {
+    async loadEpisode(episode, podcastName = '', autoPlay = false) {
         if (!episode || !episode.audioUrl) {
             throw new Error('Invalid episode data');
         }
 
+        console.log('Loading episode:', episode.title);
+        console.log('Audio URL:', episode.audioUrl);
+        console.log('Auto-play:', autoPlay);
+
         try {
             this.currentEpisode = episode;
+
+            // Reset audio element state
+            this.audio.pause();
+            this.audio.currentTime = 0;
+
+            // Show loading state immediately
+            this.setLoadingState(true);
+
             this.audio.src = episode.audioUrl;
+            this.audio.load();
 
             this.updatePlayerUI(episode, podcastName);
             this.showPlayer();
 
             this.saveCurrentEpisode();
 
-            announceToScreenReader(`Loading episode: ${episode.title}`);
+            if (autoPlay) {
+                announceToScreenReader(`Loading episode: ${episode.title}`);
+                // Wait for the audio to be ready before auto-playing
+                this.waitForReadyAndPlay();
+            } else {
+                announceToScreenReader(`Loaded episode: ${episode.title}. Press play to start.`);
+            }
 
         } catch (error) {
             console.error('Error loading episode:', error);
+            this.setLoadingState(false);
             this.onError(error);
             throw error;
         }
@@ -115,12 +135,22 @@ class AudioPlayer {
     }
 
     async play() {
-        if (!this.currentEpisode) return;
+        if (!this.currentEpisode) {
+            console.warn('No current episode to play');
+            return;
+        }
+
+        console.log('Attempting to play episode:', this.currentEpisode.title);
+        console.log('Audio src:', this.audio.src);
+        console.log('Audio readyState:', this.audio.readyState);
 
         try {
             await this.audio.play();
+            console.log('Audio play succeeded');
         } catch (error) {
             console.error('Play error:', error);
+            console.error('Error name:', error.name);
+            console.error('Error message:', error.message);
             announceToScreenReader('Unable to play episode');
             this.onError(error);
         }
@@ -165,6 +195,40 @@ class AudioPlayer {
         this.setLoadingState(false);
     }
 
+    waitForReadyAndPlay() {
+        const tryPlay = () => {
+            if (this.audio.readyState >= 3) { // HAVE_FUTURE_DATA
+                console.log('Audio ready, attempting auto-play');
+                this.play();
+            } else {
+                console.log('Audio not ready yet, waiting...');
+                setTimeout(tryPlay, 100);
+            }
+        };
+
+        // Start checking immediately
+        tryPlay();
+
+        // Also listen for the canplay event as a backup
+        const onCanPlay = () => {
+            console.log('Audio can play, attempting auto-play');
+            this.audio.removeEventListener('canplay', onCanPlay);
+            this.play();
+        };
+
+        this.audio.addEventListener('canplay', onCanPlay);
+
+        // Timeout after 10 seconds
+        setTimeout(() => {
+            this.audio.removeEventListener('canplay', onCanPlay);
+            if (this.audio.readyState < 3) {
+                console.warn('Audio loading timeout');
+                this.setLoadingState(false);
+                announceToScreenReader('Episode loading timeout. Press play to try again.');
+            }
+        }, 10000);
+    }
+
     onTimeUpdate() {
         if (!this.audio.duration) return;
 
@@ -198,12 +262,19 @@ class AudioPlayer {
 
     onError(error) {
         console.error('Audio error:', error);
+        console.error('Audio src:', this.audio.src);
+        console.error('Audio readyState:', this.audio.readyState);
+        console.error('Audio networkState:', this.audio.networkState);
+
         this.setLoadingState(false);
         this.isPlaying = false;
         this.updatePlayPauseButton();
 
         let errorMessage = 'Unable to play this episode';
         if (error.target && error.target.error) {
+            console.error('Media error code:', error.target.error.code);
+            console.error('Media error message:', error.target.error.message);
+
             switch (error.target.error.code) {
                 case error.target.error.MEDIA_ERR_NETWORK:
                     errorMessage = 'Network error - check your connection';
@@ -212,9 +283,15 @@ class AudioPlayer {
                     errorMessage = 'Audio format not supported';
                     break;
                 case error.target.error.MEDIA_ERR_SRC_NOT_SUPPORTED:
-                    errorMessage = 'Audio source not supported';
+                    errorMessage = 'Audio source not supported or blocked by CORS';
+                    break;
+                case error.target.error.MEDIA_ERR_ABORTED:
+                    errorMessage = 'Audio loading was aborted';
                     break;
             }
+        } else if (error.message) {
+            console.error('Error message:', error.message);
+            errorMessage = error.message;
         }
 
         announceToScreenReader(errorMessage);
@@ -245,6 +322,27 @@ class AudioPlayer {
         this.elements.skipBackBtn.disabled = loading;
         this.elements.skipForwardBtn.disabled = loading;
         this.elements.progressBar.disabled = loading;
+
+        // Add/remove loading spinner on the play button
+        if (loading) {
+            this.elements.playPauseBtn.classList.add('loading');
+            this.elements.playIcon.classList.add('hidden');
+            this.elements.pauseIcon.classList.add('hidden');
+
+            // Add spinner if it doesn't exist
+            if (!this.elements.playPauseBtn.querySelector('.button-spinner')) {
+                const spinner = document.createElement('div');
+                spinner.className = 'button-spinner';
+                this.elements.playPauseBtn.appendChild(spinner);
+            }
+        } else {
+            this.elements.playPauseBtn.classList.remove('loading');
+            const spinner = this.elements.playPauseBtn.querySelector('.button-spinner');
+            if (spinner) {
+                spinner.remove();
+            }
+            this.updatePlayPauseButton();
+        }
     }
 
     handleKeyPress(event) {

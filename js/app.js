@@ -289,17 +289,55 @@ class PodcatcherApp {
     }
 
     async playEpisode(episode, podcastName) {
-        try {
-            await audioPlayer.loadEpisode(episode, podcastName);
-            this.navigateToPage('player-page');
-            this.closeModal();
+        console.log('Attempting to play episode:', episode);
 
+        if (!episode.audioUrl) {
+            console.error('No audio URL found for episode');
+            showError('This episode has no audio file available.', this.elements.episodesList);
+            return;
+        }
+
+        // Immediately switch to player tab and close modal
+        this.navigateToPage('player-page');
+        this.closeModal();
+
+        try {
+            // Load episode with auto-play enabled
+            await audioPlayer.loadEpisode(episode, podcastName, true);
             announceToScreenReader(`Now playing: ${episode.title}`);
         } catch (error) {
             console.error('Play episode error:', error);
-            showError('Unable to play episode. Please try again.', this.elements.episodesList);
+            // Show error on player page instead of modal
+            this.showPlayerError('Unable to play episode. Please try again.');
             announceToScreenReader('Failed to play episode');
         }
+    }
+
+    showPlayerError(message) {
+        const playerContainer = document.getElementById('player-container');
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'player-error';
+        errorDiv.innerHTML = `
+            <div class="error-message">
+                <p>⚠️ ${message}</p>
+                <button onclick="this.parentElement.parentElement.remove()" class="retry-button">Dismiss</button>
+            </div>
+        `;
+
+        // Remove any existing error messages
+        const existingError = playerContainer.querySelector('.player-error');
+        if (existingError) {
+            existingError.remove();
+        }
+
+        playerContainer.insertBefore(errorDiv, playerContainer.firstChild);
+
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (errorDiv.parentElement) {
+                errorDiv.remove();
+            }
+        }, 5000);
     }
 
     closeModal() {
